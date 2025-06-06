@@ -33,7 +33,7 @@ interface AddTransactionModalProps {
     onTransactionAdded: (success: boolean) => void; // Callback to refresh dashboard data
 }
 
-const PRINTER_SERVICE_CHARGE = 500; // Define fixed printer service charge
+const PRINTER_USAGE_PRICE_PER_PAPER = 500; // Define fixed printer service charge per paper
 
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClose, onTransactionAdded }) => {
     const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -44,6 +44,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     const [selectedCustomer, setSelectedCustomer] = useState<string>('');
     const [selectedStaff, setSelectedStaff] = useState<string>('');
     const [selectedPrinter, setSelectedPrinter] = useState<string>(''); // For printer service
+    const [printerPapersCount, setPrinterPapersCount] = useState<number>(1); // NEW: State for paper count
     const [selectedInventory, setSelectedInventory] = useState<{ i_id: string; quantity: number }[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<string>('');
 
@@ -107,6 +108,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             setSelectedCustomer('');
             setSelectedStaff('');
             setSelectedPrinter('');
+            setPrinterPapersCount(1); // Reset paper count
             setSelectedInventory([]);
             setPaymentMethod('');
             setFormMessage(null);
@@ -147,8 +149,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                 total += itemDetails.i_price * selectedItem.quantity;
             }
         });
-        if (selectedPrinter) {
-            total += PRINTER_SERVICE_CHARGE;
+        if (selectedPrinter && printerPapersCount > 0) { // Only add printer cost if printer selected AND papers count is valid
+            total += PRINTER_USAGE_PRICE_PER_PAPER * printerPapersCount;
         }
         return total;
     };
@@ -159,9 +161,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
         setFormMessage(null);
         setError(null);
 
-        if (!selectedCustomer || !selectedStaff || !paymentMethod || (selectedInventory.length === 0 && !selectedPrinter)) {
+        // Check if at least one inventory item or a printer service is provided
+        const isPrinterServiceSelected = selectedPrinter && printerPapersCount > 0;
+
+        if (!selectedCustomer || !selectedStaff || !paymentMethod || (selectedInventory.length === 0 && !isPrinterServiceSelected)) {
             setMessageType('error');
-            setFormMessage('Please fill in all required fields (Customer, Staff, Payment Method) and select at least one Inventory Item or a Printer Service.');
+            setFormMessage('Please fill in all required fields (Customer, Staff, Payment Method) and select at least one Inventory Item or a Printer Service (with valid paper count).');
             return;
         }
 
@@ -180,6 +185,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             customer_c_id: selectedCustomer,
             staff_s_id: selectedStaff,
             printer_p_id: selectedPrinter || undefined, // Send as undefined if not selected
+            printer_papers_count: isPrinterServiceSelected ? printerPapersCount : undefined, // NEW: Include paper count if printer selected
             inventory_items: selectedInventory,
             t_paymentmethod: paymentMethod,
         };
@@ -260,18 +266,35 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Printer Service (Fixed Price: Rp {PRINTER_SERVICE_CHARGE.toLocaleString('id-ID')}):</label>
+                            <label htmlFor="printer" className="block text-gray-700 text-sm font-bold mb-2">Printer Service (Rp {PRINTER_USAGE_PRICE_PER_PAPER.toLocaleString('id-ID')} per paper):</label>
                             <select
                                 id="printer"
                                 className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                                 value={selectedPrinter}
-                                onChange={(e) => setSelectedPrinter(e.target.value)}
+                                onChange={(e) => {
+                                    setSelectedPrinter(e.target.value);
+                                    setPrinterPapersCount(e.target.value ? 1 : 0); // Reset papers count if "No Printer Service" is selected
+                                }}
                             >
                                 <option value="">No Printer Service</option>
                                 {printers.map(p => (
                                     <option key={p.p_id} value={p.p_id}>{p.p_id} ({p.p_condition})</option>
                                 ))}
                             </select>
+                            {selectedPrinter && (
+                                <div className="mt-2">
+                                    <label htmlFor="printerPapersCount" className="block text-gray-700 text-sm font-bold mb-2">Number of Papers:</label>
+                                    <input
+                                        type="number"
+                                        id="printerPapersCount"
+                                        min="1"
+                                        value={printerPapersCount}
+                                        onChange={(e) => setPrinterPapersCount(parseInt(e.target.value) || 0)}
+                                        className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                        required={!!selectedPrinter} // Required only if a printer is selected
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="mb-4">

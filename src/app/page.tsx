@@ -278,8 +278,8 @@ const DashboardPage: React.FC = () => {
             <div className="mt-8">
                 <TransactionTable
                     title="Transaction History (Full CRUD)"
-                    orderBy="t_datetime"
-                    orderDirection="desc"
+                    orderBy="t_id"
+                    orderDirection="asc"
                     showActions={true} // Edit and Delete actions will be available
                     showAddButton={true} // Explicitly tell it to show the add button
                 />

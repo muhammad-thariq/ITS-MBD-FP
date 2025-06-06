@@ -7,6 +7,7 @@ interface TransactionPayload {
     customer_c_id: string;
     staff_s_id: string;
     printer_p_id?: string;
+    printer_papers_count?: number; // NEW: Number of papers for printer service
     inventory_items: Array<{
         i_id: string;
         quantity: number;
@@ -14,7 +15,7 @@ interface TransactionPayload {
     t_paymentmethod: string;
 }
 
-const PRINTER_SERVICE_PRICE = 500; // Fixed price for printer service
+const PRINTER_USAGE_PRICE_PER_PAPER = 500; // Fixed price for printer service per paper
 
 // GET all transactions with pagination and nested data
 export async function GET(req: Request) {
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
                 t_datetime,
                 t_totalprice,
                 t_paymentmethod,
+                t_paperscount,
                 customer_c_id,
                 customer (c_name),
                 staff_transact (staff (s_name, s_id)),
@@ -70,52 +72,53 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const { customer_c_id, staff_s_id, printer_p_id, inventory_items, t_paymentmethod }: TransactionPayload = await req.json();
+        const { customer_c_id, staff_s_id, printer_p_id, printer_papers_count, inventory_items, t_paymentmethod }: TransactionPayload = await req.json();
 
         // Basic validation
-        if (!customer_c_id || !staff_s_id || !t_paymentmethod || !inventory_items) {
-            return NextResponse.json({ message: 'Missing required transaction fields.' }, { status: 400 });
+        if (!customer_c_id || !staff_s_id || !t_paymentmethod || (!inventory_items || inventory_items.length === 0) && (!printer_p_id || typeof printer_papers_count !== 'number' || printer_papers_count <= 0)) {
+            return NextResponse.json({ message: 'Missing required transaction fields or invalid printer service/inventory items.' }, { status: 400 });
         }
 
         // Validate inventory items format
-        if (!Array.isArray(inventory_items) || inventory_items.some(item => !item.i_id || typeof item.quantity !== 'number' || item.quantity <= 0)) {
+        if (inventory_items && !Array.isArray(inventory_items) || inventory_items.some(item => !item.i_id || typeof item.quantity !== 'number' || item.quantity <= 0)) {
             return NextResponse.json({ message: 'Invalid inventory items format. Each item needs i_id and a positive quantity.' }, { status: 400 });
         }
 
-        // Check if at least one inventory item or a printer service is provided
-        if (inventory_items.length === 0 && !printer_p_id) {
-            return NextResponse.json({ message: 'Transaction must include at least one inventory item or a printer service.' }, { status: 400 });
+        // Validate printer papers count if printer service is selected
+        if (printer_p_id && (typeof printer_papers_count !== 'number' || printer_papers_count <= 0)) {
+            return NextResponse.json({ message: 'Printer service selected but invalid paper count provided. Must be a positive number.' }, { status: 400 });
         }
-
 
         let totalTransactionPrice = 0;
         const transactionInventoryInserts = [];
 
         // 1. Calculate total price and prepare inventory inserts, and validate stock
-        for (const item of inventory_items) {
-            const { data: inventoryData, error: inventoryError } = await supabase
-                .from('inventory')
-                .select('i_price, i_stock, i_name')
-                .eq('i_id', item.i_id)
-                .single();
+        if (inventory_items) { // Ensure inventory_items is not null/undefined
+            for (const item of inventory_items) {
+                const { data: inventoryData, error: inventoryError } = await supabase
+                    .from('inventory')
+                    .select('i_price, i_stock, i_name')
+                    .eq('i_id', item.i_id)
+                    .single();
 
-            if (inventoryError || !inventoryData) {
-                return NextResponse.json({ message: `Inventory item ${item.i_id} not found or error fetching price.`, details: inventoryError?.message }, { status: 404 });
+                if (inventoryError || !inventoryData) {
+                    return NextResponse.json({ message: `Inventory item ${item.i_id} not found or error fetching price.`, details: inventoryError?.message }, { status: 404 });
+                }
+
+                if (inventoryData.i_stock < item.quantity) {
+                    return NextResponse.json({ message: `Insufficient stock for item ${inventoryData.i_name}. Available: ${inventoryData.i_stock}, Requested: ${item.quantity}.` }, { status: 400 });
+                }
+
+                totalTransactionPrice += parseFloat(inventoryData.i_price) * item.quantity;
+                transactionInventoryInserts.push({
+                    inventory_i_id: item.i_id,
+                    quantity: item.quantity
+                });
             }
-
-            if (inventoryData.i_stock < item.quantity) {
-                return NextResponse.json({ message: `Insufficient stock for item ${inventoryData.i_name}. Available: ${inventoryData.i_stock}, Requested: ${item.quantity}.` }, { status: 400 });
-            }
-
-            totalTransactionPrice += parseFloat(inventoryData.i_price) * item.quantity;
-            transactionInventoryInserts.push({
-                inventory_i_id: item.i_id,
-                quantity: item.quantity
-            });
         }
 
         // Add printer service price if a printer is involved
-        if (printer_p_id) {
+        if (printer_p_id && typeof printer_papers_count === 'number' && printer_papers_count > 0) {
             const { data: printerData, error: printerError } = await supabase
                 .from('printer')
                 .select('p_id')
@@ -125,7 +128,7 @@ export async function POST(req: Request) {
             if (printerError || !printerData) {
                 return NextResponse.json({ message: `Printer ${printer_p_id} not found.`, details: printerError?.message }, { status: 404 });
             }
-            totalTransactionPrice += PRINTER_SERVICE_PRICE;
+            totalTransactionPrice += PRINTER_USAGE_PRICE_PER_PAPER * printer_papers_count;
         }
 
         // 2. Generate a new transaction ID
@@ -162,6 +165,7 @@ export async function POST(req: Request) {
                     customer_c_id: customer_c_id,
                     t_totalprice: totalTransactionPrice, // This price might be modified by a DB trigger
                     t_paymentmethod: t_paymentmethod,
+                    t_paperscount: printer_papers_count || 0, // NEW: Store paper count, default to 0 if not a printer transaction
                     // t_datetime defaults to CURRENT_TIMESTAMP in DB
                 })
                 .select('t_id, t_totalprice') // Select the final total price after trigger
