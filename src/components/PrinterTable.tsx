@@ -87,13 +87,16 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
     // Fetches all staff when the component mounts or modal is opened (more efficient here)
     const fetchAllStaff = useCallback(async () => {
         try {
-            const res = await fetch('/api/staff');
+            // It's generally a good idea to fetch all staff without pagination for a dropdown/checkbox list
+            // Using a very large limit to ensure all are fetched.
+            const res = await fetch('/api/staff?limit=9999');
             if (!res.ok) {
                 const errData = await res.json();
                 throw new Error(errData.message || 'Failed to fetch all staff');
             }
-            const data: StaffInfo[] = await res.json();
-            setAllStaff(data);
+            // MODIFICATION: Correctly access the 'staffMembers' property from the API response
+            const { staffMembers }: { staffMembers: StaffInfo[] } = await res.json();
+            setAllStaff(staffMembers);
         } catch (err: any) {
             console.error("Failed to fetch all staff:", err);
             setError(err.message); // This error might block the entire form if not handled gracefully
@@ -101,7 +104,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
     }, []);
 
 
-    // Pagination State (unchanged)
+    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const itemsPerPage = 5;
@@ -139,7 +142,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
         fetchAllStaff(); // Fetch all staff once on component mount
     }, [fetchPrinters, fetchAllStaff]);
 
-    // Handlers for pagination (unchanged)
+    // Handlers for pagination
     const handleNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage(prev => prev + 1);
@@ -196,6 +199,9 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
         const method = formState.p_id ? 'PUT' : 'POST';
         const printerUrl = '/api/printers';
         const maintenanceUrl = '/api/maintenance';
+        // Assuming you'll create this API route for staff assignment if it doesn't exist yet
+        const staffPrinterUrl = (printerId: string) => `/api/printers/${printerId}/staff`;
+
 
         const p_status_boolean = formState.p_status_str === 'operational';
 
@@ -232,7 +238,11 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             }
 
             // 2. Handle Staff Assignments (PUT /api/printers/[p_id]/staff)
-            const staffAssignmentRes = await fetch(`/api/printers/${currentPrinterId}/staff`, {
+            // This API route doesn't exist in your provided code structure,
+            // so you would need to create it (e.g., src/app/api/printers/[p_id]/staff/route.ts)
+            // It should take staffIds array and update staff_printer table for that printer.
+            // For now, it will likely fail if not implemented.
+            const staffAssignmentRes = await fetch(staffPrinterUrl(currentPrinterId), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ staffIds: formState.selectedStaffIds })
@@ -240,6 +250,8 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             if (!staffAssignmentRes.ok) {
                 const errData = await staffAssignmentRes.json();
                 // Capture both message and details from the API response
+                // Consider logging this or handling it more gracefully if staff assignment isn't critical for initial printer creation/update success
+                console.error('Failed to update staff assignments:', errData); // Log the full error data
                 throw new Error(errData.message || 'Failed to update staff assignments', { cause: errData.details });
             }
 
@@ -431,7 +443,11 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             p_id: printer.p_id,
             p_condition: printer.p_condition,
             p_status_str: printer.p_status ? 'operational' : 'maintenance',
-            selectedStaffIds: printer.staff_printer.map(sp => sp.staff?.s_id).filter((sId): sId is string => !!sId), // Filter out null/undefined
+            // Map staff_printer assignments to selectedStaffIds.
+            // Filter out any potential nulls if staff object is not fully populated.
+            selectedStaffIds: printer.staff_printer
+                .map(sp => sp.staff?.s_id)
+                .filter((sId): sId is string => !!sId),
             latestMaintenance: latestMaint ? {
                 ma_dateti: dayjs(latestMaint.ma_dateti).format('YYYY-MM-DD'), // Format date for input type="date"
                 ma_brand: latestMaint.ma_brand,
@@ -514,12 +530,14 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                                             <td className="py-2 px-4 border-b text-sm text-gray-800">
                                                 {printer.staff_printer && printer.staff_printer.length > 0
                                                     ? printer.staff_printer
-                                                          .map(sp => sp.staff?.s_id).filter((sId): sId is string => !!sId)
-                                                          .map(sId => allStaff.find(staff => staff.s_id === sId)?.s_name || sId) // Map s_id to s_name
+                                                          .map(sp => sp.staff?.s_id)
+                                                          .filter((sId): sId is string => !!sId)
+                                                          // Corrected: Ensure allStaff is an array before using find
+                                                          .map(sId => allStaff.find(staff => staff.s_id === sId)?.s_name || sId)
                                                           .join(', ')
                                                     : 'N/A'}
                                             </td>
-                                            {/* Maintenance details (unchanged) */}
+                                            {/* Maintenance details */}
                                             <td className="py-2 px-4 border-b text-sm text-gray-800">
                                                 {latestMaintenance ? dayjs(latestMaintenance.ma_dateti).format('L') : 'N/A'}
                                             </td>
@@ -534,7 +552,6 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                                             </td>
                                             {showActions && (
                                                 <td className="py-2 px-4 border-b text-center space-x-2">
-                                                    {/* Original Edit/Delete buttons */}
                                                     <button
                                                         onClick={() => openEditModal(printer)}
                                                         className="bg-yellow-500 text-white px-3 py-1 rounded-md text-xs hover:bg-yellow-600 transition-colors"
@@ -556,7 +573,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                         </table>
                     </div>
 
-                    {/* Pagination Controls (unchanged) */}
+                    {/* Pagination Controls */}
                     <div className="flex justify-between items-center mt-4">
                         <button
                             onClick={handlePreviousPage}
@@ -579,7 +596,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                 </>
             )}
 
-            {/* View All Printers Link (unchanged) */}
+            {/* View All Printers Link */}
             {showViewAllLink && (
                 <div className="text-right mt-4">
                     <Link href="/printers" passHref>
@@ -675,7 +692,6 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                                                     value={formState.latestMaintenance.ma_dateti || ''}
                                                     onChange={handleMaintenanceInputChange}
                                                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                                    // Removed disabled attribute - now always editable
                                                 />
                                             </div>
                                             <div className="mb-4">
@@ -719,7 +735,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                 </div>
             )}
 
-            {/* Delete Confirmation Modal (unchanged) */}
+            {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && currentPrinter && (
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">

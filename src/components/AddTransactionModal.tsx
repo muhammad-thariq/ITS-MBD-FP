@@ -60,10 +60,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             setIsLoading(true);
             setError(null);
             try {
+                // Fetch all customers and staff with a large limit for dropdowns
                 const [customersRes, staffRes, printersRes, inventoryRes] = await Promise.all([
-                    fetch('/api/customers/active-membership'), // You might want a more general customer API if non-members can transact
-                    fetch('/api/staff'),
-                    fetch('/api/printers/function-details'), // Using function-details to get printer info
+                    fetch('/api/customers?limit=9999'),
+                    fetch('/api/staff?limit=9999'),
+                    fetch('/api/printers/function-details'),
                     fetch('/api/inventory/details'),
                 ]);
 
@@ -72,10 +73,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                 if (!printersRes.ok) throw new Error('Failed to fetch printers');
                 if (!inventoryRes.ok) throw new Error('Failed to fetch inventory');
 
-                const customersData: CustomerOption[] = await customersRes.json();
-                const staffData: StaffOption[] = await staffRes.json();
-                const printersData: PrinterOption[] = await printersRes.json();
-                const inventoryData: InventoryItemOption[] = await inventoryRes.json();
+                // MODIFICATION START: Correctly destructure API responses
+                const { customers: customersData }: { customers: CustomerOption[] } = await customersRes.json();
+                const { staffMembers: staffData }: { staffMembers: StaffOption[] } = await staffRes.json();
+                // MODIFICATION END
+
+                const printersData: PrinterOption[] = await printersRes.json(); // This API returns array directly
+                const inventoryData: InventoryItemOption[] = await inventoryRes.json(); // This API returns array directly
 
                 setCustomers(customersData);
                 setStaff(staffData);
@@ -155,9 +159,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
         setFormMessage(null);
         setError(null);
 
-        if (!selectedCustomer || !selectedStaff || !paymentMethod || selectedInventory.length === 0) {
+        if (!selectedCustomer || !selectedStaff || !paymentMethod || (selectedInventory.length === 0 && !selectedPrinter)) {
             setMessageType('error');
-            setFormMessage('Please fill in all required fields (Customer, Staff, Payment Method, and at least one Inventory Item).');
+            setFormMessage('Please fill in all required fields (Customer, Staff, Payment Method) and select at least one Inventory Item or a Printer Service.');
             return;
         }
 
@@ -303,8 +307,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                                     ))
                                 )}
                             </div>
-                            {selectedInventory.length === 0 && (
-                                <p className="text-red-500 text-xs mt-1">Please select at least one inventory item.</p>
+                            {selectedInventory.length === 0 && !selectedPrinter && (
+                                <p className="text-red-500 text-xs mt-1">Please select at least one inventory item OR a printer service.</p>
                             )}
                         </div>
 

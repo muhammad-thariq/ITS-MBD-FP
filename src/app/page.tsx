@@ -5,12 +5,16 @@ import { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { BarChart } from '../components/Chart';
 import dayjs from 'dayjs';
-import PrinterTable from '../components/PrinterTable'; // Keep commented out as it's not used directlyi
+import PrinterTable from '../components/PrinterTable';
 import PrinterDetailsTable from '../components/PrinterDetailsTable';
 import InventoryTableFromFunction from '../components/InventoryTableFromFunction';
 import ActiveCustomersTable from '../components/ActiveCustomersTable';
-import AddTransactionModal from '../components/AddTransactionModal'; // <--- NEW IMPORT
-
+// Removed: import AddTransactionModal from '../components/AddTransactionModal'; // This import will be removed
+import InventoryTable from '../components/InventoryTable';
+import CustomerTable from '../components/CustomerTable';
+import MembershipTable from '../components/MembershipTable';
+import StaffTable from '../components/StaffTable';
+import TransactionTable from '../components/TransactionTable'; // This is where the button will be moved into
 
 // Define interfaces for data fetched from API routes
 interface SummaryData {
@@ -44,7 +48,7 @@ const DashboardPage: React.FC = () => {
     const [kpi, setKpi] = useState<KPIData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false); // New state for modal
+    // Removed: const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false); // Removed state
 
     // Function to fetch all dashboard data
     const fetchData = async () => {
@@ -79,12 +83,13 @@ const DashboardPage: React.FC = () => {
         fetchData();
     }, []); // Initial data fetch on component mount
 
-    const handleTransactionAdded = (success: boolean) => {
-        setIsTransactionModalOpen(false); // Close modal
-        if (success) {
-            fetchData(); // Refresh dashboard data if transaction was successful
-        }
-    };
+    // Removed: handleTransactionAdded is no longer needed here as TransactionTable will manage its own refresh
+    // const handleTransactionAdded = (success: boolean) => {
+    //     setIsTransactionModalOpen(false); // Close modal
+    //     if (success) {
+    //         fetchData(); // Refresh dashboard data if transaction was successful
+    //     }
+    // };
 
     if (loading) {
         return <div className="p-8 text-center text-gray-600">Loading dashboard...</div>;
@@ -187,7 +192,7 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </Card>
 
-                {/* Gross Profit (Last 7 Days) Chart Card with "Add New Transaction" button */}
+                {/* Gross Profit (Last 7 Days) Chart Card - Removed "Add New Transaction" button */}
                 <Card title="Gross Profit (Last 7 Days)">
                     <div className="relative" style={{ height: '300px' }}>
                         <BarChart
@@ -195,16 +200,10 @@ const DashboardPage: React.FC = () => {
                             title="Daily Gross Profit"
                             horizontal={false}
                         />
-                        <button
-                            onClick={() => setIsTransactionModalOpen(true)}
-                            className="absolute bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors shadow-lg"
-                        >
-                            Add New Transaction
-                        </button>
+                        {/* Removed the button from here */}
                     </div>
                 </Card>
             </div>
-
 
             {/* Existing Tables below */}
             <div className="mt-8">
@@ -217,15 +216,54 @@ const DashboardPage: React.FC = () => {
                 <ActiveCustomersTable />
             </div>
 
-            {/* New Transaction Modal */}
-            <AddTransactionModal
+            {/* Removed: AddTransactionModal is now managed by TransactionTable */}
+            {/* <AddTransactionModal
                 isOpen={isTransactionModalOpen}
                 onClose={() => setIsTransactionModalOpen(false)}
                 onTransactionAdded={handleTransactionAdded}
-            />
+            /> */}
 
-           <div className="mt-8">
-                Your existing PrinterTable remains here, using its original API route
+            <div className="mt-8">
+                <CustomerTable
+                    title="Customer Management (Full CRUD)"
+                    orderBy="c_id"
+                    orderDirection="asc"
+                    showAddButton={true}
+                    showActions={true}
+                />
+            </div>
+
+            <div className="mt-8">
+                <MembershipTable
+                    title="Membership Management (Full CRUD)"
+                    orderBy="m_id"
+                    orderDirection="asc"
+                    showAddButton={true}
+                    showActions={true}
+                />
+            </div>
+
+            <div className="mt-8">
+                <InventoryTable
+                    title="Inventory Management (Full CRUD)"
+                    orderBy="i_id"
+                    orderDirection="asc"
+                    showAddButton={true}
+                    showActions={true}
+                />
+            </div>
+
+            <div className="mt-8">
+                <StaffTable
+                    title="Staff Management (Full CRUD)"
+                    orderBy="s_id"
+                    orderDirection="asc"
+                    showAddButton={true}
+                    showActions={true}
+                />
+            </div>
+
+            <div className="mt-8">
                 <PrinterTable
                     title="Printer Management (Standard API)"
                     orderBy="p_id"
@@ -233,6 +271,17 @@ const DashboardPage: React.FC = () => {
                     showAddButton={true}
                     showActions={true}
                     showViewAllLink={false}
+                />
+            </div>
+
+            {/* NEW: Transaction History Table (Full CRUD) - Will now manage its own "Add New Transaction" button */}
+            <div className="mt-8">
+                <TransactionTable
+                    title="Transaction History (Full CRUD)"
+                    orderBy="t_datetime"
+                    orderDirection="desc"
+                    showActions={true} // Edit and Delete actions will be available
+                    showAddButton={true} // Explicitly tell it to show the add button
                 />
             </div>
 

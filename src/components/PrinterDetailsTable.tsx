@@ -24,7 +24,7 @@ interface PrinterDetailsTableProps {
 }
 
 const PrinterDetailsTable: React.FC<PrinterDetailsTableProps> = ({
-    title = "Printer Details (from get_printer_details_with_maintenance() Function)"
+    title = "Complex Query (printer & maintenance)"
 }) => {
     const [printerDetails, setPrinterDetails] = useState<PrinterFunctionDetail[]>([]);
     const [loading, setLoading] = useState(true);

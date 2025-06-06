@@ -17,7 +17,7 @@ interface InventoryTableFromFunctionProps {
 }
 
 const InventoryTableFromFunction: React.FC<InventoryTableFromFunctionProps> = ({
-    title = "Inventory Details (from PostgreSQL Function)"
+    title = "Simple Query (inventory)"
 }) => {
     const [inventory, setInventory] = useState<InventoryDetail[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,10 +62,10 @@ const InventoryTableFromFunction: React.FC<InventoryTableFromFunctionProps> = ({
                     <table className="min-w-full bg-white border border-gray-200">
                         <thead>
                             <tr className="bg-gray-50 text-left text-sm text-gray-600">
-                                <th className="py-2 px-4 border-b">ID</th>
-                                <th className="py-2 px-4 border-b">Name</th>
-                                <th className="py-2 px-4 border-b">Stock</th>
-                                <th className="py-2 px-4 border-b">Price</th>
+                                <th className="py-2 px-4 border-b">i_id</th>
+                                <th className="py-2 px-4 border-b">i_name</th>
+                                <th className="py-2 px-4 border-b">i_stock</th>
+                                <th className="py-2 px-4 border-b">i_price</th>
                             </tr>
                         </thead>
                         <tbody>
