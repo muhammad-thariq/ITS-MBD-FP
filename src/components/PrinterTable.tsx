@@ -514,9 +514,9 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                                             <td className="py-2 px-4 border-b text-sm text-gray-800">
                                                 {printer.staff_printer && printer.staff_printer.length > 0
                                                     ? printer.staff_printer
-                                                        .map(sp => sp.staff?.s_id).filter((sId): sId is string => !!sId)
-                                                        .map(sId => allStaff.find(staff => staff.s_id === sId)?.s_name || sId) // Map s_id to s_name
-                                                        .join(', ')
+                                                          .map(sp => sp.staff?.s_id).filter((sId): sId is string => !!sId)
+                                                          .map(sId => allStaff.find(staff => staff.s_id === sId)?.s_name || sId) // Map s_id to s_name
+                                                          .join(', ')
                                                     : 'N/A'}
                                             </td>
                                             {/* Maintenance details (unchanged) */}

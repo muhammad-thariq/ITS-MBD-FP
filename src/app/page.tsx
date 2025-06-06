@@ -1,15 +1,19 @@
-// app/page.tsx
+// --- Nama File: ..\my-next-app\src\app\page.tsx ---
 'use client';
 
 import { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { BarChart } from '../components/Chart';
 import dayjs from 'dayjs';
-import PrinterTable from '../components/PrinterTable'; // This was already here
+import PrinterTable from '../components/PrinterTable'; // Keep commented out as it's not used directlyi
+import PrinterDetailsTable from '../components/PrinterDetailsTable';
+import InventoryTableFromFunction from '../components/InventoryTableFromFunction';
+import ActiveCustomersTable from '../components/ActiveCustomersTable';
+import AddTransactionModal from '../components/AddTransactionModal'; // <--- NEW IMPORT
+
 
 // Define interfaces for data fetched from API routes
 interface SummaryData {
-    // RESTORED: customers property
     customers: {
         total: number;
         membership: number;
@@ -40,36 +44,47 @@ const DashboardPage: React.FC = () => {
     const [kpi, setKpi] = useState<KPIData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false); // New state for modal
+
+    // Function to fetch all dashboard data
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const [summaryRes, kpiRes] = await Promise.all([
+                fetch('/api/dashboard/summary'),
+                fetch('/api/dashboard/kpi'),
+            ]);
+
+            if (!summaryRes.ok || !kpiRes.ok) {
+                let errorMessage = 'Failed to fetch dashboard data: ';
+                if (!summaryRes.ok) errorMessage += `Summary (${summaryRes.status}) `;
+                if (!kpiRes.ok) errorMessage += `KPI (${kpiRes.status}) `;
+                throw new Error(errorMessage.trim());
+            }
+
+            const summaryData: SummaryData = await summaryRes.json();
+            const kpiData: KPIData = await kpiRes.json();
+
+            setSummary(summaryData);
+            setKpi(kpiData);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [summaryRes, kpiRes] = await Promise.all([
-                    fetch('/api/dashboard/summary'),
-                    fetch('/api/dashboard/kpi'),
-                ]);
-
-                if (!summaryRes.ok || !kpiRes.ok) {
-                    let errorMessage = 'Failed to fetch dashboard data: ';
-                    if (!summaryRes.ok) errorMessage += `Summary (${summaryRes.status}) `;
-                    if (!kpiRes.ok) errorMessage += `KPI (${kpiRes.status}) `;
-                    throw new Error(errorMessage.trim());
-                }
-
-                const summaryData: SummaryData = await summaryRes.json();
-                const kpiData: KPIData = await kpiRes.json();
-
-                setSummary(summaryData);
-                setKpi(kpiData);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
-    }, []);
+    }, []); // Initial data fetch on component mount
+
+    const handleTransactionAdded = (success: boolean) => {
+        setIsTransactionModalOpen(false); // Close modal
+        if (success) {
+            fetchData(); // Refresh dashboard data if transaction was successful
+        }
+    };
 
     if (loading) {
         return <div className="p-8 text-center text-gray-600">Loading dashboard...</div>;
@@ -109,22 +124,15 @@ const DashboardPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 p-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-8">Admin Dashboard</h1>
 
             {/* Summary Statistics Section */}
-            {/* Note: I've adjusted the grid layout from lg:grid-cols-5 to lg:grid-cols-4
-                since you've decided to keep only 4 cards (Transactions, Customers, Staff, Printers, Profit).
-                If you intended to have 5 cards, including customers, then lg:grid-cols-5 is correct.
-                I'm assuming you want to keep the "Total Customers" card as one of the 5.
-                If you removed "Total Customers" from `page.tsx` in the prior step, uncomment it now.
-            */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 {/* Total Transactions Card */}
                 <Card title="Total Transactions">
                     <p className="text-4xl font-bold text-purple-600">{summary.totalTransactions}</p>
                 </Card>
 
-                {/* Total Customers Card - This card is now restored and uses `summary.customers` */}
+                {/* Total Customers Card */}
                 <Card title="Total Customers">
                     <p className="text-4xl font-bold text-blue-600">{summary.customers.total}</p>
                     <p className="text-sm text-gray-500">Membership: {summary.customers.membership}</p>
@@ -179,21 +187,47 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </Card>
 
-                {/* Gross Profit (Last 7 Days) Chart Card */}
+                {/* Gross Profit (Last 7 Days) Chart Card with "Add New Transaction" button */}
                 <Card title="Gross Profit (Last 7 Days)">
-                    <div style={{ height: '300px' }}>
+                    <div className="relative" style={{ height: '300px' }}>
                         <BarChart
                             data={dailyGrossProfitChartData}
                             title="Daily Gross Profit"
                             horizontal={false}
                         />
+                        <button
+                            onClick={() => setIsTransactionModalOpen(true)}
+                            className="absolute bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors shadow-lg"
+                        >
+                            Add New Transaction
+                        </button>
                     </div>
                 </Card>
             </div>
 
+
+            {/* Existing Tables below */}
             <div className="mt-8">
+                <InventoryTableFromFunction />
+            </div>
+            <div className="mt-8">
+                <PrinterDetailsTable />
+            </div>
+            <div className="mt-8">
+                <ActiveCustomersTable />
+            </div>
+
+            {/* New Transaction Modal */}
+            <AddTransactionModal
+                isOpen={isTransactionModalOpen}
+                onClose={() => setIsTransactionModalOpen(false)}
+                onTransactionAdded={handleTransactionAdded}
+            />
+
+           <div className="mt-8">
+                Your existing PrinterTable remains here, using its original API route
                 <PrinterTable
-                    title="Printer Management"
+                    title="Printer Management (Standard API)"
                     orderBy="p_id"
                     orderDirection="asc"
                     showAddButton={true}

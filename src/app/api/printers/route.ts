@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
         const { data: printers, error: dataError } = await supabase
             .from('printer')
-            // This is the crucial part: no comments inside these backticks!
+            // REMOVE THE COMMENT LINE BELOW THIS!
             .select(`
                 p_id,
                 p_status,
