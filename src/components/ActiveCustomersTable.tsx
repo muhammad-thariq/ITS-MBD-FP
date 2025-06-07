@@ -23,7 +23,7 @@ interface ActiveCustomersTableProps {
 }
 
 const ActiveCustomersTable: React.FC<ActiveCustomersTableProps> = ({
-    title = "Customers with Active Membership"
+    title = "Active Query (view)"
 }) => {
     const [customers, setCustomers] = useState<ActiveCustomer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -43,9 +43,15 @@ const ActiveCustomersTable: React.FC<ActiveCustomersTableProps> = ({
                 const data: ActiveCustomer[] = await res.json();
                 console.log('Fetched Active Customers:', data); // For debugging
                 setCustomers(data);
-            } catch (err: any) {
-                console.error("Error fetching active customers:", err);
-                setError(err.message);
+            } catch (err: unknown) { // Changed 'any' to 'unknown'
+                let errorMessage = 'An unexpected error occurred.';
+                if (err instanceof Error) {
+                    errorMessage = err.message;
+                } else if (typeof err === 'string') {
+                    errorMessage = err;
+                }
+                console.error("Error fetching active customers:", errorMessage);
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }

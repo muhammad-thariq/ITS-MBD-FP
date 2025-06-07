@@ -72,8 +72,14 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
             const { customers: fetchedCustomers, totalCount } = await res.json();
             setCustomers(fetchedCustomers);
             setTotalPages(Math.ceil(totalCount / itemsPerPage));
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while fetching customers.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -113,7 +119,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
 
         const method = currentCustomer ? 'PUT' : 'POST';
         const url = '/api/customers';
-        let body: any = {
+        let body: CustomerFormState = { // Explicitly type `body`
             c_name: formState.c_name,
             c_phone: formState.c_phone,
         };
@@ -145,8 +151,14 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
             setFormState({ c_name: '', c_phone: '' }); // Reset form state
             setCurrentPage(1); // Reset to first page to see changes
             fetchCustomers(); // Re-fetch to get the latest data
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = `An unexpected error occurred while trying to ${method === 'POST' ? 'add' : 'update'} the customer.`;
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
             setLoading(false);
         }
     };
@@ -172,8 +184,14 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
             } else {
                 fetchCustomers(); // Re-fetch to get the latest data
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while deleting the customer.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

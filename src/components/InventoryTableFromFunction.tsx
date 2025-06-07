@@ -37,9 +37,15 @@ const InventoryTableFromFunction: React.FC<InventoryTableFromFunctionProps> = ({
                 const data: InventoryDetail[] = await res.json();
                 console.log('Fetched Inventory Details from Function:', data); // For debugging
                 setInventory(data);
-            } catch (err: any) {
-                console.error("Error fetching inventory details:", err);
-                setError(err.message);
+            } catch (err: unknown) { // Changed 'any' to 'unknown'
+                let errorMessage = 'An unexpected error occurred while fetching inventory details.';
+                if (err instanceof Error) {
+                    errorMessage = err.message;
+                } else if (typeof err === 'string') {
+                    errorMessage = err;
+                }
+                console.error("Error fetching inventory details:", errorMessage);
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }

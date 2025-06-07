@@ -79,9 +79,13 @@ export async function GET(req: Request) {
             totalCount: totalCount
         });
 
-    } catch (error: any) {
-        console.error('Unexpected error fetching printers:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error fetching printers:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -105,9 +109,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Failed to create printer', details: error.message }, { status: 500 });
         }
         return NextResponse.json(data[0], { status: 201 });
-    } catch (error: any) {
-        console.error('Unexpected error creating printer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error creating printer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -133,9 +141,13 @@ export async function PUT(req: Request) {
             return NextResponse.json({ message: `Printer with ID ${p_id} not found.` }, { status: 404 });
         }
         return NextResponse.json(data[0]);
-    } catch (error: any) {
-        console.error('Unexpected error updating printer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error updating printer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -149,7 +161,7 @@ export async function DELETE(req: Request) {
         }
 
         // 1. Delete associated records from the 'maintenance' table first
-        const { error: deleteMaintenanceError, count: maintenanceCount } = await supabase
+        const { error: deleteMaintenanceError /* Removed: count: maintenanceCount */ } = await supabase // Removed unused var
             .from('maintenance')
             .delete()
             .eq('printer_p_id', p_id);
@@ -163,7 +175,7 @@ export async function DELETE(req: Request) {
         }
 
         // 2. Delete associated records from the 'staff_printer' table
-        const { error: deleteStaffPrinterError, count: staffPrinterCount } = await supabase
+        const { error: deleteStaffPrinterError /* Removed: count: staffPrinterCount */ } = await supabase // Removed unused var
             .from('staff_printer')
             .delete()
             .eq('printer_p_id', p_id);
@@ -190,8 +202,12 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ message: `Printer with ID ${p_id} not found or already deleted.` }, { status: 404 });
         }
         return NextResponse.json({ message: `Printer ${p_id} and its associated records deleted successfully` }, { status: 200 });
-    } catch (error: any) {
-        console.error('Unexpected error deleting printer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error deleting printer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

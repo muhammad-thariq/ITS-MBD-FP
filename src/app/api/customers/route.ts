@@ -66,9 +66,13 @@ export async function GET(req: Request) {
             totalCount: totalCount
         }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error fetching customers:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed from 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error fetching customers:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -97,9 +101,13 @@ export async function POST(req: Request) {
         }
         return NextResponse.json(data[0], { status: 201 });
 
-    } catch (error: any) {
-        console.error('Unexpected error creating customer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed from 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error creating customer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -129,9 +137,13 @@ export async function PUT(req: Request) {
         }
         return NextResponse.json(data[0], { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error updating customer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed from 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error updating customer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -164,8 +176,12 @@ export async function DELETE(req: Request) {
         }
         return NextResponse.json({ message: `Customer ${c_id} deleted successfully` }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error deleting customer:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed from 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error deleting customer:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

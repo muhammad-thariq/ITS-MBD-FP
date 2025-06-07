@@ -49,6 +49,25 @@ interface PrinterFormState {
     isNewMaintenance: boolean; // Flag to track if we're creating a new one or updating existing
 }
 
+// NEW INTERFACES for API Payloads
+interface PrinterApiPayload {
+    p_id?: string; // Optional for POST, required for PUT
+    p_condition: string;
+    p_status: boolean;
+}
+
+interface MaintenanceApiPayload {
+    ma_dateti: string;
+    ma_brand: string;
+    ma_price: number;
+    ma_notes: string;
+    printer_p_id: string;
+}
+
+interface StaffPrinterApiPayload {
+    staffIds: string[];
+}
+
 interface PrinterTableProps {
     orderBy?: string;
     orderDirection?: 'asc' | 'desc';
@@ -97,9 +116,15 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             // MODIFICATION: Correctly access the 'staffMembers' property from the API response
             const { staffMembers }: { staffMembers: StaffInfo[] } = await res.json();
             setAllStaff(staffMembers);
-        } catch (err: any) {
-            console.error("Failed to fetch all staff:", err);
-            setError(err.message); // This error might block the entire form if not handled gracefully
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while fetching all staff.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            console.error("Failed to fetch all staff:", errorMessage);
+            setError(errorMessage); // This error might block the entire form if not handled gracefully
         }
     }, []);
 
@@ -130,8 +155,14 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             const { printers: fetchedPrinters, totalCount } = await res.json();
             setPrinters(fetchedPrinters);
             setTotalPages(Math.ceil(totalCount / itemsPerPage));
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while fetching printers.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -156,7 +187,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
     };
 
     // --- Form Input Change Handlers ---
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { // Added HTMLSelectElement
         const { name, value } = e.target;
         setFormState(prev => ({
             ...prev,
@@ -210,10 +241,11 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
 
             // 1. Handle Printer Basic Info (POST/PUT /api/printers)
             if (method === 'POST') {
+                const printerPayload: PrinterApiPayload = { p_condition: formState.p_condition, p_status: p_status_boolean };
                 const newPrinterRes = await fetch(printerUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ p_condition: formState.p_condition, p_status: p_status_boolean })
+                    body: JSON.stringify(printerPayload)
                 });
                 if (!newPrinterRes.ok) {
                     const errData = await newPrinterRes.json();
@@ -222,10 +254,11 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                 const newPrinterData = await newPrinterRes.json();
                 currentPrinterId = newPrinterData.p_id; // Get the newly created ID
             } else { // method === 'PUT'
+                const printerPayload: PrinterApiPayload = { p_id: formState.p_id, p_condition: formState.p_condition, p_status: p_status_boolean };
                 const updatePrinterRes = await fetch(printerUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ p_id: formState.p_id, p_condition: formState.p_condition, p_status: p_status_boolean })
+                    body: JSON.stringify(printerPayload)
                 });
                 if (!updatePrinterRes.ok) {
                     const errData = await updatePrinterRes.json();
@@ -238,19 +271,14 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             }
 
             // 2. Handle Staff Assignments (PUT /api/printers/[p_id]/staff)
-            // This API route doesn't exist in your provided code structure,
-            // so you would need to create it (e.g., src/app/api/printers/[p_id]/staff/route.ts)
-            // It should take staffIds array and update staff_printer table for that printer.
-            // For now, it will likely fail if not implemented.
+            const staffAssignmentPayload: StaffPrinterApiPayload = { staffIds: formState.selectedStaffIds };
             const staffAssignmentRes = await fetch(staffPrinterUrl(currentPrinterId), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ staffIds: formState.selectedStaffIds })
+                body: JSON.stringify(staffAssignmentPayload)
             });
             if (!staffAssignmentRes.ok) {
                 const errData = await staffAssignmentRes.json();
-                // Capture both message and details from the API response
-                // Consider logging this or handling it more gracefully if staff assignment isn't critical for initial printer creation/update success
                 console.error('Failed to update staff assignments:', errData); // Log the full error data
                 throw new Error(errData.message || 'Failed to update staff assignments', { cause: errData.details });
             }
@@ -266,7 +294,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                 // If form is empty but there was existing maintenance, try to delete the latest
                 const latestExistingMaint = currentPrinter.maintenance.sort((a, b) => dayjs(b.ma_dateti).valueOf() - dayjs(a.ma_dateti).valueOf())[0];
                 if (latestExistingMaint) {
-                   const deleteMaintRes = await fetch(`${maintenanceUrl}?ma_dateti=${encodeURIComponent(latestExistingMaint.ma_dateti)}&printer_p_id=${currentPrinterId}`, {
+                    const deleteMaintRes = await fetch(`${maintenanceUrl}?ma_dateti=${encodeURIComponent(latestExistingMaint.ma_dateti)}&printer_p_id=${currentPrinterId}`, {
                         method: 'DELETE',
                     });
                     if (!deleteMaintRes.ok) {
@@ -288,19 +316,20 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                 const originalDate = formState.originalMaintenanceDateti;
                 const isDateChanged = originalDate && dayjs(originalDate).format('YYYY-MM-DD') !== dayjs(newDate).format('YYYY-MM-DD');
 
+                const maintPayload: MaintenanceApiPayload = {
+                    ma_dateti: dayjs(newDate).toISOString(), // Use provided date for new record, or current if empty
+                    ma_brand: maintenanceData.ma_brand,
+                    ma_price: formattedPrice,
+                    ma_notes: maintenanceData.ma_notes,
+                    printer_p_id: currentPrinterId,
+                };
 
                 if (formState.isNewMaintenance) {
                     // Always create new if it's a new record
                     const createMaintRes = await fetch(maintenanceUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            ma_dateti: dayjs(newDate).toISOString(), // Use provided date for new record, or current if empty
-                            ma_brand: maintenanceData.ma_brand,
-                            ma_price: formattedPrice,
-                            ma_notes: maintenanceData.ma_notes,
-                            printer_p_id: currentPrinterId,
-                        })
+                        body: JSON.stringify(maintPayload)
                     });
                     if (!createMaintRes.ok) {
                         const errData = await createMaintRes.json();
@@ -325,13 +354,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                     const createNewMaintRes = await fetch(maintenanceUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            ma_dateti: dayjs(newDate).toISOString(), // Use the new date for the new record
-                            ma_brand: maintenanceData.ma_brand,
-                            ma_price: formattedPrice,
-                            ma_notes: maintenanceData.ma_notes,
-                            printer_p_id: currentPrinterId,
-                        })
+                        body: JSON.stringify(maintPayload)
                     });
                     if (!createNewMaintRes.ok) {
                         const errData = await createNewMaintRes.json();
@@ -339,6 +362,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                     }
                 } else {
                     // Simple PUT update for existing record if date hasn't changed
+                    // Note: ma_dateti and printer_p_id are composite primary keys for maintenance
                     const updateMaintRes = await fetch(maintenanceUrl, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -372,13 +396,22 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             });
             setCurrentPage(1); // Reset to first page
             fetchPrinters(); // Re-fetch to get the latest data
-        } catch (err: any) {
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred during printer operation.';
             // Check if the error has a 'cause' (for detailed API errors)
-            if (err.cause) {
-                setError(`${err.message}: ${err.cause}`);
+            if (err instanceof Error) {
+                if (err.cause) {
+                    errorMessage = `${err.message}: ${String(err.cause)}`; // Safely convert cause to string
+                } else {
+                    errorMessage = err.message;
+                }
+            } else if (typeof err === 'string') {
+                errorMessage = err;
             } else {
-                setError(err.message);
+                // Fallback for truly unknown error types
+                errorMessage = 'An unknown error occurred.';
             }
+            setError(errorMessage);
             setLoading(false); // Ensure loading state is reset on error
         }
     };
@@ -403,8 +436,14 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             } else {
                 fetchPrinters();
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while deleting the printer.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -432,7 +471,7 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
 
     const openEditModal = (printer: Printer) => {
         setCurrentPrinter(printer);
-        
+
         let latestMaint: MaintenanceRecord | null = null;
         // Explicitly check if printer.maintenance exists and has elements
         if (printer.maintenance && printer.maintenance.length > 0) {
@@ -530,11 +569,11 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
                                             <td className="py-2 px-4 border-b text-sm text-gray-800">
                                                 {printer.staff_printer && printer.staff_printer.length > 0
                                                     ? printer.staff_printer
-                                                          .map(sp => sp.staff?.s_id)
-                                                          .filter((sId): sId is string => !!sId)
-                                                          // Corrected: Ensure allStaff is an array before using find
-                                                          .map(sId => allStaff.find(staff => staff.s_id === sId)?.s_name || sId)
-                                                          .join(', ')
+                                                        .map(sp => sp.staff?.s_id)
+                                                        .filter((sId): sId is string => !!sId)
+                                                        // Corrected: Ensure allStaff is an array before using find
+                                                        .map(sId => (allStaff.find(staff => staff.s_id === sId)?.s_name || sId))
+                                                        .join(', ')
                                                     : 'N/A'}
                                             </td>
                                             {/* Maintenance details */}

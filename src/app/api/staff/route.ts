@@ -66,9 +66,13 @@ export async function GET(req: Request) {
             totalCount: totalCount
         }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error fetching staff:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error fetching staff:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -100,9 +104,13 @@ export async function POST(req: Request) {
         }
         return NextResponse.json(data[0], { status: 201 });
 
-    } catch (error: any) {
-        console.error('Unexpected error creating staff member:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error creating staff member:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -135,9 +143,13 @@ export async function PUT(req: Request) {
         }
         return NextResponse.json(data[0], { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error updating staff member:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error updating staff member:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -196,8 +208,12 @@ export async function DELETE(req: Request) {
         }
         return NextResponse.json({ message: `Staff member ${s_id} deleted successfully` }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error deleting staff member:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error deleting staff member:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

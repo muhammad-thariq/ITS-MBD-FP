@@ -44,9 +44,15 @@ const PrinterDetailsTable: React.FC<PrinterDetailsTableProps> = ({
                 const data: PrinterFunctionDetail[] = await res.json();
                 console.log('Fetched Printer Details from Function:', data); // For debugging
                 setPrinterDetails(data);
-            } catch (err: any) {
-                console.error("Error fetching printer details:", err);
-                setError(err.message);
+            } catch (err: unknown) { // Changed 'any' to 'unknown'
+                let errorMessage = 'An unexpected error occurred while fetching printer details.';
+                if (err instanceof Error) {
+                    errorMessage = err.message;
+                } else if (typeof err === 'string') {
+                    errorMessage = err;
+                }
+                console.error("Error fetching printer details:", errorMessage);
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }

@@ -66,9 +66,13 @@ export async function GET(req: Request) {
             totalCount: totalCount
         }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error fetching inventory:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error fetching inventory:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -97,9 +101,13 @@ export async function POST(req: Request) {
         }
         return NextResponse.json(data[0], { status: 201 });
 
-    } catch (error: any) {
-        console.error('Unexpected error creating inventory item:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error creating inventory item:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -129,9 +137,13 @@ export async function PUT(req: Request) {
         }
         return NextResponse.json(data[0], { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error updating inventory item:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error updating inventory item:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -164,8 +176,12 @@ export async function DELETE(req: Request) {
         }
         return NextResponse.json({ message: `Inventory item ${i_id} deleted successfully` }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error deleting inventory item:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error deleting inventory item:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

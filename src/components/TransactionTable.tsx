@@ -39,6 +39,13 @@ interface CustomerOption {
     c_name: string;
 }
 
+// New Interface for the PUT API payload for transactions
+interface TransactionUpdatePayload {
+    t_id: string;
+    customer_c_id: string;
+    t_paymentmethod: string;
+}
+
 interface TransactionTableProps {
     orderBy?: string;
     orderDirection?: 'asc' | 'desc';
@@ -96,8 +103,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             const { transactions: fetchedTransactions, totalCount } = await res.json();
             setTransactions(fetchedTransactions);
             setTotalPages(Math.ceil(totalCount / itemsPerPage));
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while fetching transactions.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -113,8 +126,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             }
             const { customers: fetchedCustomers } = await res.json();
             setAllCustomers(fetchedCustomers);
-        } catch (err: any) {
-            console.error("Error fetching all customers for transaction edit:", err);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while fetching all customers for transaction edit.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            console.error("Error fetching all customers for transaction edit:", errorMessage);
+            // No need to set global error here, as this is for a modal dropdown
         }
     }, []);
 
@@ -153,7 +173,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         setError(null);
 
         const url = '/api/transactions';
-        const body = {
+        const body: TransactionUpdatePayload = { // Explicitly type body
             t_id: formState.t_id,
             customer_c_id: formState.customer_c_id,
             t_paymentmethod: formState.t_paymentmethod,
@@ -174,8 +194,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             setIsEditModalOpen(false);
             setCurrentTransaction(null); // Clear current item after operation
             fetchTransactions(); // Re-fetch to get the latest data
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while updating the transaction.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -202,8 +228,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             } else {
                 fetchTransactions(); // Re-fetch to get the latest data
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred while deleting the transaction.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

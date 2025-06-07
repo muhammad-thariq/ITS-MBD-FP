@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Card from './Card'; // Assuming you have a Card component
+// Removed: import Card from './Card'; // This import is not used in the final return JSX
 
 // Interfaces for fetched data (for dropdowns)
 interface CustomerOption {
@@ -91,9 +92,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                 if (customersData.length > 0) setSelectedCustomer(customersData[0].c_id);
                 if (staffData.length > 0) setSelectedStaff(staffData[0].s_id);
                 // No default printer selection for now as it's optional
-            } catch (err: any) {
-                console.error("Error fetching dropdown data:", err);
-                setError(err.message);
+            } catch (err: unknown) { // Changed 'any' to 'unknown'
+                let errorMessage = 'An unexpected error occurred while fetching dropdown data.';
+                if (err instanceof Error) {
+                    errorMessage = err.message;
+                } else if (typeof err === 'string') {
+                    errorMessage = err;
+                }
+                console.error("Error fetching dropdown data:", errorMessage);
+                setError(errorMessage);
             } finally {
                 setIsLoading(false);
             }
@@ -213,10 +220,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                 setFormMessage(errorData.message || 'Failed to add transaction.');
                 onTransactionAdded(false);
             }
-        } catch (err: any) {
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
             setMessageType('error');
-            setError('Network error: ' + err.message);
-            setFormMessage('Network error: ' + err.message);
+            let errorMessage = 'Network error: An unexpected error occurred.';
+            if (err instanceof Error) {
+                errorMessage = 'Network error: ' + err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = 'Network error: ' + err;
+            }
+            setError(errorMessage);
+            setFormMessage(errorMessage);
             onTransactionAdded(false);
         }
     };

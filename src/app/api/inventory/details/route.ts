@@ -15,8 +15,12 @@ export async function GET() {
         // The 'data' will be an array of records returned by your function
         return NextResponse.json(data, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error in /api/inventory/details:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard to safely access error properties
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error in /api/inventory/details:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

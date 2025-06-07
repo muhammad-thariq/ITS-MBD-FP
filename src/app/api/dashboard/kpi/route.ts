@@ -55,8 +55,12 @@ export async function GET() {
             }
         });
 
-    } catch (error: any) {
-        console.error('Error fetching dashboard KPIs:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard to safely access error properties
+            errorMessage = error.message;
+        }
+        console.error('Error fetching dashboard KPIs:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }

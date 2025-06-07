@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { BarChart } from '../components/Chart';
-import dayjs from 'dayjs';
+// Removed: import dayjs from 'dayjs'; // Removed unused import
 import PrinterTable from '../components/PrinterTable';
 import PrinterDetailsTable from '../components/PrinterDetailsTable';
 import InventoryTableFromFunction from '../components/InventoryTableFromFunction';
@@ -72,8 +72,14 @@ const DashboardPage: React.FC = () => {
 
             setSummary(summaryData);
             setKpi(kpiData);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unexpected error occurred.';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

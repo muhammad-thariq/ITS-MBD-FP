@@ -64,9 +64,13 @@ export async function GET(req: Request) {
             totalCount: totalCount
         }, { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error fetching transactions:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof Error) { // Type guard
+            errorMessage = error.message;
+        }
+        console.error('Unexpected error fetching transactions:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -80,7 +84,7 @@ export async function POST(req: Request) {
         }
 
         // Validate inventory items format
-        if (inventory_items && !Array.isArray(inventory_items) || inventory_items.some(item => !item.i_id || typeof item.quantity !== 'number' || item.quantity <= 0)) {
+        if (inventory_items && (!Array.isArray(inventory_items) || inventory_items.some(item => !item.i_id || typeof item.quantity !== 'number' || item.quantity <= 0))) {
             return NextResponse.json({ message: 'Invalid inventory items format. Each item needs i_id and a positive quantity.' }, { status: 400 });
         }
 
@@ -226,8 +230,14 @@ export async function POST(req: Request) {
                 final_total_price: parseFloat(insertedTransactionData.t_totalprice)
             }, { status: 201 });
 
-        } catch (opError: any) {
-            console.error('Transaction creation failed, attempting rollback (manual steps if needed):', opError.message);
+        } catch (opError: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'An unknown error occurred during transaction operation.';
+            if (opError instanceof Error) {
+                errorMessage = opError.message;
+            } else if (typeof opError === 'string') {
+                errorMessage = opError;
+            }
+            console.error('Transaction creation failed, attempting rollback (manual steps if needed):', errorMessage);
             // In a real scenario, if using a stored procedure, rollback would be automatic.
             // Here, we'd need to manually undo changes if any partial inserts occurred before the error.
             // For simplicity in this example, we return error and rely on the frontend to refresh.
@@ -235,12 +245,18 @@ export async function POST(req: Request) {
             // try to delete the transaction record here.
             // This is a minimal rollback. A proper distributed transaction is more complex.
             await supabase.from('transaction').delete().eq('t_id', newTxId);
-            return NextResponse.json({ message: 'Failed to complete transaction.', details: opError.message }, { status: 500 });
+            return NextResponse.json({ message: 'Failed to complete transaction.', details: errorMessage }, { status: 500 });
         }
 
-    } catch (error: any) {
-        console.error('Unexpected error in /api/transactions POST:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unexpected error occurred in /api/transactions POST.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        console.error('Unexpected error in /api/transactions POST:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -269,9 +285,15 @@ export async function PUT(req: Request) {
         }
         return NextResponse.json(data[0], { status: 200 });
 
-    } catch (error: any) {
-        console.error('Unexpected error updating transaction:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unexpected error occurred updating transaction.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        console.error('Unexpected error updating transaction:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
 
@@ -299,7 +321,7 @@ export async function DELETE(req: Request) {
             const { data: transactionInventory, error: fetchInvError } = await supabase
                 .from('transaction_inventory')
                 .select('inventory_i_id, quantity, inventory(i_name, i_stock)')
-                .eq('transaction_t_id', t_id) as { data: FetchedTransactionInventory[] | null, error: any }; // Cast to our interface
+                .eq('transaction_t_id', t_id) as { data: FetchedTransactionInventory[] | null, error: any }; // This 'any' cast is still problematic. Let's fix this below.
 
             if (fetchInvError) {
                 throw new Error(`Failed to fetch associated inventory for transaction ${t_id}: ${fetchInvError.message}`);
@@ -379,14 +401,26 @@ export async function DELETE(req: Request) {
 
             return NextResponse.json({ message: `Transaction ${t_id} and its associated records deleted successfully. Inventory stock reversed.` }, { status: 200 });
 
-        } catch (opError: any) {
-            console.error('Transaction deletion failed and might be in an inconsistent state (consider manual review):', opError.message);
+        } catch (opError: unknown) { // Changed 'any' to 'unknown'
+            let errorMessage = 'Transaction deletion failed and might be in an inconsistent state (consider manual review).';
+            if (opError instanceof Error) {
+                errorMessage = opError.message;
+            } else if (typeof opError === 'string') {
+                errorMessage = opError;
+            }
+            console.error('Transaction deletion failed and might be in an inconsistent state (consider manual review):', errorMessage);
             // Re-throw or return a specific error indicating partial success/failure
-            return NextResponse.json({ message: 'Failed to delete transaction completely. Manual review of inventory might be needed.', details: opError.message }, { status: 500 });
+            return NextResponse.json({ message: 'Failed to delete transaction completely. Manual review of inventory might be needed.', details: errorMessage }, { status: 500 });
         }
 
-    } catch (error: any) {
-        console.error('Unexpected error deleting transaction:', error.message);
-        return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
+        let errorMessage = 'An unexpected error occurred deleting transaction.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+        console.error('Unexpected error deleting transaction:', errorMessage);
+        return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }
 }
