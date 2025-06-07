@@ -1,7 +1,7 @@
 // --- Nama File: ..\my-next-app\src\app\api\transactions\route.ts ---
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../utils/supabaseClient';
-import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
+// Removed: import { PostgrestError } from '@supabase/supabase-js'; // This import is now unused
 
 // Define expected payload types for better type checking
 interface TransactionPayload {
@@ -65,12 +65,15 @@ export async function GET(req: Request) {
             totalCount: totalCount
         }, { status: 200 });
 
-    } catch (error: unknown) { // Changed 'any' to 'unknown'
+    } catch (error: unknown) {
         let errorMessage = 'An unexpected error occurred in /api/transactions GET.';
         if (error instanceof Error) {
             errorMessage = error.message;
         } else if (typeof error === 'string') {
             errorMessage = error;
+        } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+            // This handles potential Supabase errors which might be objects but not instanceof Error
+            errorMessage = error.message;
         }
         console.error('Unexpected error fetching transactions:', errorMessage);
         return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
@@ -212,14 +215,12 @@ export async function POST(req: Request) {
             // 6. Insert into `transaction_inventory`
             // This will trigger `trg_inventory_stock_reduction` AFTER insertion for each item
             if (transactionInventoryInserts.length > 0) {
-                const insertsWithTxId = transactionInventoryInserts.map(item => ({
-                    ...item,
-                    transaction_t_id: newTxId
-                }));
-
                 const { error: invTxError } = await supabase
                     .from('transaction_inventory')
-                    .insert(insertsWithTxId);
+                    .insert(transactionInventoryInserts.map(item => ({
+                        ...item,
+                        transaction_t_id: newTxId
+                    })));
 
                 if (invTxError) {
                     throw new Error(`Failed to link inventory items to transaction: ${invTxError.message}`);
@@ -233,28 +234,21 @@ export async function POST(req: Request) {
                 final_total_price: parseFloat(insertedTransactionData.t_totalprice)
             }, { status: 201 });
 
-        } catch (opError: unknown) { // Changed 'any' to 'unknown'
+        } catch (opError: unknown) {
             let errorMessage = 'An unknown error occurred during transaction operation.';
             if (opError instanceof Error) {
                 errorMessage = opError.message;
             } else if (typeof opError === 'string') {
                 errorMessage = opError;
             } else if (opError && typeof opError === 'object' && 'message' in opError && typeof opError.message === 'string') {
-                // This handles potential Supabase errors which might be objects but not instanceof Error
                 errorMessage = opError.message;
             }
             console.error('Transaction creation failed, attempting rollback (manual steps if needed):', errorMessage);
-            // In a real scenario, if using a stored procedure, rollback would be automatic.
-            // Here, we'd need to manually undo changes if any partial inserts occurred before the error.
-            // For simplicity in this example, we return error and rely on the frontend to refresh.
-            // For example: if transaction record was inserted but staff_transact failed, you might
-            // try to delete the transaction record here.
-            // This is a minimal rollback. A proper distributed transaction is more complex.
             await supabase.from('transaction').delete().eq('t_id', newTxId);
             return NextResponse.json({ message: 'Failed to complete transaction.', details: errorMessage }, { status: 500 });
         }
 
-    } catch (error: unknown) { // Changed 'any' to 'unknown'
+    } catch (error: unknown) {
         let errorMessage = 'An unexpected error occurred in /api/transactions POST.';
         if (error instanceof Error) {
             errorMessage = error.message;
@@ -293,7 +287,7 @@ export async function PUT(req: Request) {
         }
         return NextResponse.json(data[0], { status: 200 });
 
-    } catch (error: unknown) { // Changed 'any' to 'unknown'
+    } catch (error: unknown) {
         let errorMessage = 'An unexpected error occurred updating transaction.';
         if (error instanceof Error) {
             errorMessage = error.message;
@@ -317,17 +311,17 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ message: 'Transaction ID (t_id) is required for deletion' }, { status: 400 });
         }
 
-        // Define a type for the fetched transaction inventory item
-        interface FetchedTransactionInventory {
-            inventory_i_id: string;
-            quantity: number;
-            // The 'inventory' property is correctly inferred as an array of one item
-            inventory: { i_name: string; i_stock: number; }[];
-        }
+        // Removed: interface FetchedTransactionInventory is no longer needed
+        // interface FetchedTransactionInventory {
+        //     inventory_i_id: string;
+        //     quantity: number;
+        //     inventory: { i_name: string; i_stock: number; }[];
+        // }
 
         // Start a sequence of operations that act like a transaction (manual rollback if error)
         try {
             // 1. Fetch associated inventory items to reverse stock
+            // The type inference for data and error here should be fine without explicit casting
             const { data: transactionInventory, error: fetchInvError } = await supabase
                 .from('transaction_inventory')
                 .select('inventory_i_id, quantity, inventory(i_name, i_stock)')
@@ -411,7 +405,7 @@ export async function DELETE(req: Request) {
 
             return NextResponse.json({ message: `Transaction ${t_id} and its associated records deleted successfully. Inventory stock reversed.` }, { status: 200 });
 
-        } catch (opError: unknown) { // Changed 'any' to 'unknown'
+        } catch (opError: unknown) {
             let errorMessage = 'Transaction deletion failed and might be in an inconsistent state (consider manual review).';
             if (opError instanceof Error) {
                 errorMessage = opError.message;
@@ -425,7 +419,7 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ message: 'Failed to delete transaction completely. Manual review of inventory might be needed.', details: errorMessage }, { status: 500 });
         }
 
-    } catch (error: unknown) { // Changed 'any' to 'unknown'
+    } catch (error: unknown) {
         let errorMessage = 'An unexpected error occurred deleting transaction.';
         if (error instanceof Error) {
             errorMessage = error.message;
