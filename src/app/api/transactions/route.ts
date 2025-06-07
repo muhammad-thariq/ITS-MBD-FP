@@ -1,6 +1,7 @@
 // --- Nama File: ..\my-next-app\src\app\api\transactions\route.ts ---
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../utils/supabaseClient';
+import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
 
 // Define expected payload types for better type checking
 interface TransactionPayload {
@@ -65,9 +66,11 @@ export async function GET(req: Request) {
         }, { status: 200 });
 
     } catch (error: unknown) { // Changed 'any' to 'unknown'
-        let errorMessage = 'An unknown error occurred.';
-        if (error instanceof Error) { // Type guard
+        let errorMessage = 'An unexpected error occurred in /api/transactions GET.';
+        if (error instanceof Error) {
             errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
         }
         console.error('Unexpected error fetching transactions:', errorMessage);
         return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
@@ -236,6 +239,9 @@ export async function POST(req: Request) {
                 errorMessage = opError.message;
             } else if (typeof opError === 'string') {
                 errorMessage = opError;
+            } else if (opError && typeof opError === 'object' && 'message' in opError && typeof opError.message === 'string') {
+                // This handles potential Supabase errors which might be objects but not instanceof Error
+                errorMessage = opError.message;
             }
             console.error('Transaction creation failed, attempting rollback (manual steps if needed):', errorMessage);
             // In a real scenario, if using a stored procedure, rollback would be automatic.
@@ -254,6 +260,8 @@ export async function POST(req: Request) {
             errorMessage = error.message;
         } else if (typeof error === 'string') {
             errorMessage = error;
+        } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+            errorMessage = error.message;
         }
         console.error('Unexpected error in /api/transactions POST:', errorMessage);
         return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
@@ -291,6 +299,8 @@ export async function PUT(req: Request) {
             errorMessage = error.message;
         } else if (typeof error === 'string') {
             errorMessage = error;
+        } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+            errorMessage = error.message;
         }
         console.error('Unexpected error updating transaction:', errorMessage);
         return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
@@ -321,7 +331,7 @@ export async function DELETE(req: Request) {
             const { data: transactionInventory, error: fetchInvError } = await supabase
                 .from('transaction_inventory')
                 .select('inventory_i_id, quantity, inventory(i_name, i_stock)')
-                .eq('transaction_t_id', t_id) as { data: FetchedTransactionInventory[] | null, error: any }; // This 'any' cast is still problematic. Let's fix this below.
+                .eq('transaction_t_id', t_id); // Removed the problematic 'as { ... error: any }' cast here
 
             if (fetchInvError) {
                 throw new Error(`Failed to fetch associated inventory for transaction ${t_id}: ${fetchInvError.message}`);
@@ -407,6 +417,8 @@ export async function DELETE(req: Request) {
                 errorMessage = opError.message;
             } else if (typeof opError === 'string') {
                 errorMessage = opError;
+            } else if (opError && typeof opError === 'object' && 'message' in opError && typeof opError.message === 'string') {
+                errorMessage = opError.message;
             }
             console.error('Transaction deletion failed and might be in an inconsistent state (consider manual review):', errorMessage);
             // Re-throw or return a specific error indicating partial success/failure
@@ -418,8 +430,10 @@ export async function DELETE(req: Request) {
         if (error instanceof Error) {
             errorMessage = error.message;
         } else if (typeof error === 'string') {
-                errorMessage = error;
-            }
+            errorMessage = error;
+        } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+            errorMessage = error.message;
+        }
         console.error('Unexpected error deleting transaction:', errorMessage);
         return NextResponse.json({ message: 'Internal Server Error', details: errorMessage }, { status: 500 });
     }

@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Card from './Card'; // Assuming you have a Card component
 // Removed: import Card from './Card'; // This import is not used in the final return JSX
 
 // Interfaces for fetched data (for dropdowns)
